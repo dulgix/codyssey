@@ -29,7 +29,7 @@ try:
 except FileNotFoundError:
     print("파일을 찾을 수 없습니다.")
 
-# --- [과제 3] 인화성(index 4) 높은 순으로 정렬 --- #
+# --- 인화성(index 4) 높은 순으로 정렬 --- #
 inventory_list.sort(key=lambda x: float(x[4]), reverse=True)
 
 print("\n--- [과제 3] 인화성 높은 순 정렬 결과 (상위 5개) ---")
