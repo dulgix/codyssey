@@ -4,7 +4,7 @@ output_danger_csv = 'Mars_Base_Inventory_danger.csv'
 output_bin = 'Mars_Base_Inventory_List.bin'
 
 # --- 파일 내용을 그대로 읽어서 출력 --- #
-print("--- [과제 1] 파일 내용 출력 ---")
+print("--- 파일 내용 출력 ---")
 try:
     with open(input_file, mode='r', encoding='utf-8') as f:
         content = f.read()
@@ -23,7 +23,7 @@ try:
             if line.strip():
                 inventory_list.append(line.strip().split(','))
 
-    print("\n--- [과제 2] 리스트 객체 변환 완료 ---")
+    print("\n--- 리스트 객체 ---")
     for item in inventory_list[:]: 
         print(item)
 except FileNotFoundError:
@@ -32,13 +32,13 @@ except FileNotFoundError:
 # --- 인화성(index 4) 높은 순으로 정렬 --- #
 inventory_list.sort(key=lambda x: float(x[4]), reverse=True)
 
-print("\n--- [과제 3] 인화성 높은 순 정렬 결과 (상위 5개) ---")
+print("\n--- 인화성 높은 순 정렬 결과  ---")
 print(header)
 for row in inventory_list[:]:
     print(row)
 
 # ---  인화성 지수 0.7 이상 목록 출력 --- #
-print("\n--- [과제 4] 인화성 지수 0.7 이상 목록 ---")
+print("\n--- 인화성 지수 0.7 이상 목록 ---")
 danger_list = [row for row in inventory_list if float(row[4]) >= 0.7]
 print(header_line) # CSV 형식으로 출력하기 위해 원본 헤더 사용
 for row in danger_list:
@@ -49,7 +49,7 @@ with open(output_danger_csv, mode='w', encoding='utf-8') as f:
     f.write(header_line + "\n")
     for row in danger_list:
         f.write(",".join(row) + "\n")
-print(f"\n--- [과제 5] 위험 목록 저장 완료: {output_danger_csv} ---")
+print(f"\n--- 위험 목록 저장 완료: {output_danger_csv} ---")
 
 # --- 정렬된 내용을 .bin으로 저장하고 다시 읽기 --- #
 try:
