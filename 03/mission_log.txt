@@ -1,0 +1,2 @@
+[2026-03-31 03:56:36] {'mars_base_internal_temperature': 29.17, 'mars_base_external_temperature': 6.61, 'mars_base_internal_humidity': 54.98, 'mars_base_external_illuminance': 647.49, 'mars_base_internal_co2': 0.085, 'mars_base_internal_oxygen': 6.39}
+[2026-03-31 03:57:36] {'mars_base_internal_temperature': 29.69, 'mars_base_external_temperature': 4.54, 'mars_base_internal_humidity': 53.63, 'mars_base_external_illuminance': 657.24, 'mars_base_internal_co2': 0.1, 'mars_base_internal_oxygen': 4.29}
