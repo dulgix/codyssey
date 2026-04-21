@@ -24,7 +24,7 @@ class Calculator(QWidget):
         """)
 
         grid = QGridLayout() # 버튼을 격자로 배치할 레이아웃
-        grid.setSpacing(10) # 버튼 사이 간격 섲ㄹ어
+        grid.setSpacing(10) # 버튼 사이 간격 설정
 
         buttons = [
             ["AC", "+/-", "%", "÷"],
