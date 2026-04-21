@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QGridLayout, QVB
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
-class Calculator(QWidget):
+class Calculator(QWidget):# qwidget 을 상속받아 클래스 만들기
     def __init__(self):
         super().__init__() # 부모 클래스 초기화 메서드 호출
         self.setWindowTitle("iPhone Calculator")# 창 제목 설정
@@ -54,7 +54,7 @@ class Calculator(QWidget):
                         background-color: {color};
                         color: white;
                         border-radius: 30px;
-                    }}
+                    }
                 """) #버튼 색깔 + 모양 꾸밈
 
                 btn.clicked.connect(self.click) # 버튼 클릭 시 click 함수 실행
