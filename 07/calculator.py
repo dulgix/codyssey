@@ -5,7 +5,7 @@ from PyQt5.QtGui import QFont
 
 class Calculator(QWidget):
     def __init__(self):
-        super().__init__()
+        super().__init__() # 부모 클래스 초기화 메서드 호출
         self.setWindowTitle("iPhone Calculator")# 창 제목 설정
         self.setFixedSize(320, 480)# 창 크기 고정
         self.setStyleSheet("background-color: black;")  #배경 색 설정
