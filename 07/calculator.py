@@ -34,10 +34,10 @@ class Calculator(QWidget):# qwidget 을 상속받아 클래스 만들기
             ["0", ".", "="]
         ] # 버튼을 리스트로 정의
 
-        for row, line in enumerate(buttons):
-            col_offset = 0
-            for col, text in enumerate(line):
-                btn = QPushButton(text)
+        for row, line in enumerate(buttons): #행 반복과 열 반복을 통해 버튼객체를 생성하는 반복문
+            col_offset = 0 # 열의 위치를 나타내는 변수
+            for col, text in enumerate(line): # 각 행 내부의 버튼 텍스트를 하나씩 꺼냄 
+                btn = QPushButton(text) # 버튼 객체 생성
                 btn.setFont(QFont("Arial", 16))
                 btn.setFixedHeight(60) #buttons 리스트를 한 줄씩 꺼냄.
 
