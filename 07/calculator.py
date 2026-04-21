@@ -59,13 +59,15 @@ class Calculator(QWidget):# qwidget 을 상속받아 클래스 만들기
 
                 btn.clicked.connect(self.click) # 버튼 클릭 시 click 함수 실행
 
+                #Grid에 위젯을 추가하는 함수입니다.
                 # 0 버튼만 가로 2칸
                 if text == "0":
                     grid.addWidget(btn, row, col_offset, 1, 2) # 0버튼은 가로로 2칸 차지
-                    col_offset += 1 # 2칸 사용했으므로 위치 보정 ( 추가 이동 )
+                    col_offset += 1 #2칸 뒤의 열로 이동
                 else:
                     grid.addWidget(btn, row, col_offset) # 일반 버튼 배치 1칸 배치
                 col_offset += 1 # 다음 열로 이동
+                                
 
         layout = QVBoxLayout() # 세로로 쌓는 레이아웃 만들기
         layout.addWidget(self.display) # 위에 디스플레이 추가
