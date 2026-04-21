@@ -54,7 +54,7 @@ class Calculator(QWidget):# qwidget 을 상속받아 클래스 만들기
                         background-color: {color};
                         color: white;
                         border-radius: 30px;
-                    }
+                    }}
                 """) #버튼 색깔 + 모양 꾸밈
 
                 btn.clicked.connect(self.click) # 버튼 클릭 시 click 함수 실행
