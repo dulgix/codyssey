@@ -1,117 +1,162 @@
-import zipfile
 import itertools
-import time
-import string
 import os
-from multiprocessing import Pool, cpu_count, Manager
+import time
+import zipfile
+from datetime import datetime
+import zlib
+import multiprocessing
+
+ZIP_FILE_NAME = "emergency_storage_key.zip"
+PASSWORD_FILE_NAME = "password.txt"
+
+CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz"
+PASSWORD_LENGTH = 6
+TOTAL_CASES = len(CHARACTERS) ** PASSWORD_LENGTH
 
 
-def check_chunk(args):
-    '''나누어진 암호 덩어리를 검사하고 진행수를 보고하는 함수'''
-    file_name, passwords, progress_dict, worker_id = args
-    count = 0
+def format_elapsed_time(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60
+
+    return f"{hours:02d}:{minutes:02d}:{secs:05.2f}"
+
+def save_password(password):
     try:
-        with zipfile.ZipFile(file_name) as zf:
-            for pwd in passwords:
-                count = count + 1
-                # 10,000번마다 메인 프로세스에 진행 상황 공유
-                if count % 10000 == 0:
-                    progress_dict[worker_id] = count
-                
-                password = ''.join(pwd)
-                try:
-                    # 암호 대입 시도
-                    zf.extractall(pwd=password.encode('utf-8'))
-                    return password
-                except:
-                    continue
-    except:
-        pass
-    progress_dict[worker_id] = count
+        with open(PASSWORD_FILE_NAME, "w", encoding="utf-8") as file:
+            file.write(password)
+    except OSError as error:
+        print(f"[오류] 비밀번호 저장 중 문제가 발생했습니다: {error}")
+
+
+def test_zip_password(zip_file, password):
+    try:
+        password_bytes = password.encode("utf-8")
+
+        for file_info in zip_file.infolist():
+            if file_info.is_dir():
+                continue
+
+            with zip_file.open(file_info, pwd=password_bytes) as file:
+                file.read()
+
+            return True
+        return False
+    
+    except (RuntimeError, zlib.error, zipfile.BadZipFile):
+        return False
+        
+    except OSError as error:
+        print(f"[오류] ZIP 파일을 읽는 중 문제가 발생했습니다: {error}")
+        raise
+
+def worker(prefix):
+    local_attempt_count = 0
+
+    try:
+        with zipfile.ZipFile(ZIP_FILE_NAME, "r") as zip_file:
+            remaining_length = PASSWORD_LENGTH - len(prefix)
+
+            for candidate_tuple in itertools.product(CHARACTERS, repeat=remaining_length):
+                password = prefix + "".join(candidate_tuple)
+                local_attempt_count += 1
+
+                if test_zip_password(zip_file, password):
+                    return password, local_attempt_count
+
+    except zipfile.BadZipFile:
+        return None, local_attempt_count
+    except OSError:
+        return None, local_attempt_count
+
+    return None, local_attempt_count
+
+def unlock_zip():
+    start_time = time.time()
+    start_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    print("ZIP 비밀번호 병렬 대입 시작")
+    print(f"시작 시간: {start_datetime}")
+    print(f"대상 파일: {ZIP_FILE_NAME}")
+    print(f"비밀번호 조건: 숫자와 소문자 알파벳으로 구성된 {PASSWORD_LENGTH}자리 문자")
+    print(f"전체 경우의 수: {TOTAL_CASES:,}")
+    print(f"사용 CPU 코어 수: {multiprocessing.cpu_count()}")
+    print("-" * 60)
+
+    if not os.path.exists(ZIP_FILE_NAME):
+        print(f"[오류] {ZIP_FILE_NAME} 파일을 찾을 수 없습니다.")
+        return None
+
+    PREFIX_LENGTH = 3
+    prefixes = []
+
+    for prefix_tuple in itertools.product(CHARACTERS, repeat=PREFIX_LENGTH):
+        prefixes.append("".join(prefix_tuple))
+
+    print(f"작업 분할 기준: 앞 {PREFIX_LENGTH}자리")
+    print(f"전체 작업 수: {len(prefixes):,}")
+    print("-" * 60)
+
+    total_attempt_count = 0
+    completed_task_count = 0
+    progress_print_interval = 10
+
+    try:
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            for result_password, attempt_count in pool.imap_unordered(worker, prefixes):
+                total_attempt_count += attempt_count
+                completed_task_count += 1
+
+                elapsed_time = time.time() - start_time
+                attempts_per_second = total_attempt_count / elapsed_time if elapsed_time > 0 else 0
+                progress_rate = (total_attempt_count / TOTAL_CASES) * 100
+
+                if attempts_per_second > 0:
+                    remaining_count = TOTAL_CASES - total_attempt_count
+                    estimated_remaining_time = remaining_count / attempts_per_second
+                else:
+                    estimated_remaining_time = 0
+
+                if completed_task_count % progress_print_interval == 0:
+                    print(
+                        f"완료 작업 수: {completed_task_count:,}/{len(prefixes):,}, "
+                        f"누적 반복 횟수: {total_attempt_count:,}, "
+                        f"진행률: {progress_rate:.6f}%, "
+                        f"초당 시도: {attempts_per_second:,.2f}회, "
+                        f"진행 시간: {format_elapsed_time(elapsed_time)}, "
+                        f"예상 남은 시간: {format_elapsed_time(estimated_remaining_time)}"
+                    )
+
+                if result_password is not None:
+                    elapsed_time = time.time() - start_time
+
+                    print("-" * 60)
+                    print("비밀번호를 찾았습니다.")
+                    print(f"비밀번호: {result_password}")
+                    print(f"반복 횟수: {total_attempt_count:,}")
+                    print(f"진행 시간: {format_elapsed_time(elapsed_time)}")
+
+                    save_password(result_password)
+                    print(f"{PASSWORD_FILE_NAME} 파일에 비밀번호를 저장했습니다.")
+
+                    pool.terminate()
+                    return result_password
+
+    except KeyboardInterrupt:
+        print("\n[중단] 사용자가 프로그램을 중단했습니다.")
+        return None
+
+    elapsed_time = time.time() - start_time
+
+    print("-" * 60)
+    print("비밀번호를 찾지 못했습니다.")
+    print(f"총 반복 횟수: {total_attempt_count:,}")
+    print(f"총 진행 시간: {format_elapsed_time(elapsed_time)}")
+
     return None
 
 
-def unlock_zip():
-    file_name = 'emergency_storage_key.zip'
-    # 숫자와 소문자 알파벳 조합 (PEP 8 규칙 준수)
-    chars = string.digits + string.ascii_lowercase
-    password_length = 6
-    total_combinations = len(chars) ** password_length
-    
-    if not os.path.exists(file_name):
-        print('오류: 파일을 찾을 수 없습니다.')
-        return
-
-    # CPU 코어 개수 확인 및 시작 시간 기록
-    num_workers = cpu_count()
-    start_time = time.time()
-    
-    print('암호 해독 시작 시간:', time.ctime(start_time))
-    print('사용 CPU 코어:', num_workers, '개')
-    print('총 조합 수:', format(total_combinations, ','), '개')
-    print('--------------------------------------------------')
-
-    # 병렬 프로세스 간 데이터 공유를 위한 매니저 객체
-    manager = Manager()
-    progress_dict = manager.dict()
-    for i in range(num_workers):
-        progress_dict[i] = 0
-
-    # 전체 조합 생성
-    all_combinations = itertools.product(chars, repeat=password_length)
-    
-    # 메모리 효율을 위한 덩어리 크기 설정
-    chunk_size = 2000000 
-    
-    with Pool(processes=num_workers) as pool:
-        while True:
-            # 조합 덩어리 추출
-            raw_chunk = list(itertools.islice(all_combinations, chunk_size))
-            if not raw_chunk:
-                break
-            
-            # 각 코어에 배분할 작업 리스트 생성
-            sub_size = len(raw_chunk) // num_workers
-            tasks = []
-            for i in range(num_workers):
-                start_idx = i * sub_size
-                end_idx = None if i == num_workers - 1 else (i + 1) * sub_size
-                tasks.append((file_name, raw_chunk[start_idx:end_idx], progress_dict, i))
-
-            # 비동기로 작업 시작
-            result_obj = pool.map_async(check_chunk, tasks)
-            
-            # 작업이 완료될 때까지 터미널에 진행 상황 출력
-            while not result_obj.ready():
-                current_total = sum(progress_dict.values())
-                elapsed = time.time() - start_time
-                if elapsed > 0:
-                    speed = current_total / elapsed
-                    progress = (current_total / total_combinations) * 100
-                    remaining = (total_combinations - current_total) / speed if speed > 0 else 0
-                    
-                    # 실시간 진행 상황 출력 (\r 사용)
-                    print(f'\r[진행] {progress:.4f}% | 속도: {int(speed):,}회/초 | '
-                          f'남은시간: {int(remaining/60)}분 {int(remaining%60)}초 ', end='')
-                time.sleep(0.1)
-
-            # 결과 확인 및 저장
-            for res in result_obj.get():
-                if res:
-                    print('\n' + '=' * 50)
-                    print('암호 해독 성공!')
-                    print('찾은 암호:', res)
-                    print('총 반복 횟수:', format(current_total, ','))
-                    print('총 소요 시간:', int(time.time() - start_time), '초')
-                    print('=' * 50)
-                    
-                    # 결과를 password.txt에 저장
-                    with open('password.txt', 'w', encoding='utf-8') as f:
-                        f.write(res)
-                    return
-
-    print('\n암호를 찾지 못했습니다.')
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
     unlock_zip()
+
